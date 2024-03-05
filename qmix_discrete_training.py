@@ -47,7 +47,7 @@ class QMIX():
         
         # Mixing target network 
         self.mixing_target_net = MixingNet(agent_num=self.agent_num, state_num=self.state_num, hidden_dim=self.hidden_dim).to(self.device)
-        self.mixing_target_net.load_state_dict(self.mixing_target_net.state_dict())
+        self.mixing_target_net.load_state_dict(self.mixing_net.state_dict())
 
         # Agent network and agent target network
         self.agent_net = []
@@ -61,7 +61,7 @@ class QMIX():
 
             # Agent target network
             self.agent_target_net.append(AgentNet(obs_num=self.state_num, action_num=self.action_num, rnn_dim=self.rnn_dim).to(self.device))
-            self.agent_target_net[i].load_state_dict(self.agent_target_net[i].state_dict())
+            self.agent_target_net[i].load_state_dict(self.agent_net[i].state_dict())
 
         # Replay buffer
         self.replay_buffer = ReplayBuffer(memory_size)

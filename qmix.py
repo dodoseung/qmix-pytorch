@@ -1,10 +1,7 @@
 import torch
-import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.distributions as D
 import numpy as np
-
 
 class MixingNet(nn.Module):
     def __init__(self, agent_num, state_num, hidden_dim):
@@ -71,3 +68,10 @@ class AgentNet(nn.Module):
         q = self.fc2(h)
 
         return q, h
+    
+    def get_action(self, observation, last_action, hidden_state, epsilon):
+        q, h = self.forward(observation, last_action, hidden_state)
+        q = q.cpu().detach().numpy()
+
+        action = np.random.choice(self.action_num, 1, p=q[0])
+        return action[0], h
