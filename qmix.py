@@ -21,8 +21,8 @@ class MixingNet(nn.Module):
                                     nn.Linear(self.hidden_dim, 1))
     
     def forward(self, states, q_values):
-        batch_size = states.shape(0)
-        
+        batch_size = states.size(0)
+        print(q_values.shape)
         # Reshaping
         states = states.reshape(-1, self.state_num)
         q_values = q_values.reshape(-1, 1, self.agent_num)
@@ -32,6 +32,7 @@ class MixingNet(nn.Module):
         w1 = w1.reshape(-1, self.agent_num, self.hidden_dim)
         b1 = self.hyper_b1(states)
         b1 = b1.reshape(-1, 1, self.hidden_dim)
+        print(q_values.shape, w1.shape, b1.shape)
         x = F.elu(torch.bmm(q_values, w1) + b1)
 
         # Second layer
@@ -53,7 +54,7 @@ class AgentNet(nn.Module):
         self.action_num = action_num
         self.rnn_dim = rnn_dim
 
-        self.fc1 = nn.Linear(self.obs_num, self.rnn_dim)
+        self.fc1 = nn.Linear(self.obs_num + 1, self.rnn_dim)
         self.gru = nn.GRUCell(self.rnn_dim, self.rnn_dim)
         self.fc2 = nn.Linear(self.rnn_dim, self.action_num)
 

@@ -34,8 +34,8 @@ class QMIX():
     def __init__(self, env, memory_size=1000000, batch_size=32, target_update=100, hidden_dim=64, rnn_dim=64, eps=1, gamma=0.99, learning_rate=5e-4):
         super(QMIX, self).__init__()
         self.env = env
-        self.agent_num = 2# self.env.agent_num
-        self.state_num = 20# self.env.observation_space.shape[0]
+        self.agent_num = 3# self.env.agent_num
+        self.state_num = 3# self.env.observation_space.shape[0]
         self.action_num = 6# self.env.action_space.n
         self.target_update = target_update
         self.hidden_dim = hidden_dim
@@ -74,21 +74,22 @@ class QMIX():
     #     # Replay buffer
     #     states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
     def training(self, states, actions, rewards, next_states, dones):    
-        states = [torch.FloatTensor(s).to(self.device) for s in states]
-        actions = [torch.FloatTensor(a).to(self.device) for a in actions]
-        rewards = [torch.FloatTensor(r).to(self.device) for r in rewards]
-        next_states = [torch.FloatTensor(ns).to(self.device) for ns in next_states]
-        dones = [torch.FloatTensor(d).to(self.device) for d in dones]
-        q_values = []
-
+        states = torch.FloatTensor(states).to(self.device)
+        actions = torch.FloatTensor(actions).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
+        next_states = torch.FloatTensor(next_states).to(self.device)
+        dones = torch.FloatTensor(dones).to(self.device)
+        
         for i in range(self.agent_num):
-            hidden_states = self.agent_net[i].init_hidden().unsqueeze(0).expand(self.batch_size, self.agent_num, -1)
-            q_value = self.agent_net[i](states[i], actions[i], hidden_states)
-            q_values.append(q_value)
+            hidden_states = self.agent_net[i].init_hidden().expand(self.batch_size, -1)
+            q_value, _ = self.agent_net[i](states[:,i,:], actions[:, i, :], hidden_states)
+            q_values = q_value if i==0 else torch.cat((q_values, q_value), dim=1)
+        
+        q_tot = self.mixing_net(states, q_values)
 
 
 if __name__ == "__main__":
-    states = torch.FloatTensor([[[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[11, 12, 13], [14, 15, 16], [17, 18, 19]]])
+    states = torch.FloatTensor([[[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[10, 11, 12], [13, 14, 15], [16, 17, 18]]])
     actions = torch.FloatTensor([[[0], [1], [2]], [[3], [4], [5]]])
     rewards = torch.FloatTensor([[[0.1], [0.2], [0.3]], [[0.4], [0.5], [0.6]]])
     next_states = torch.FloatTensor([[[11, 12, 13], [14, 15, 16], [17, 18, 19]], [[21, 22, 23], [24, 25, 26], [27, 28, 29]]])
