@@ -85,13 +85,10 @@ class QMIX():
         for i in range(self.agent_num):
             hidden_states = self.agent_net[i].init_hidden().expand(self.batch_size, -1)
             q_value, _ = self.agent_net[i](states[:,i,:], prev_actions[:, i, :], hidden_states)
-            print(q_value.shape, actions.shape)
-            q_value, _ = torch.max(q_value, dim=1)
-            q_values = q_value.unsqueeze(1) if i==0 else torch.cat((q_values, q_value.unsqueeze(1)), dim=1)
+            q_value = q_value.gather(1, actions[:, i, 0].view(-1,1).long())
+            q_values = q_value if i==0 else torch.cat((q_values, q_value), dim=1)
             
         q_tot = self.mixing_net(states, q_values)
-        print(q_tot.shape)
-
 
 if __name__ == "__main__":
     states = torch.FloatTensor([[[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[10, 11, 12], [13, 14, 15], [16, 17, 18]]])

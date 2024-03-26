@@ -21,11 +21,11 @@ class MixingNet(nn.Module):
                                     nn.Linear(self.hidden_dim, 1))
     
     def forward(self, states, q_values):
-        batch_size = states.size(0)
-
         # Reshaping
+        print(q_values)
         states = states.reshape(-1, self.state_num)
         q_values = q_values.reshape(-1, 1, self.agent_num)
+        print(q_values)
 
         # First layer
         w1 = torch.abs(self.hyper_w1(states))
