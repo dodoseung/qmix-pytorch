@@ -22,10 +22,8 @@ class MixingNet(nn.Module):
     
     def forward(self, states, q_values):
         # Reshaping
-        print(q_values)
         states = states.reshape(-1, self.state_num)
         q_values = q_values.reshape(-1, 1, self.agent_num)
-        print(q_values)
 
         # First layer
         w1 = torch.abs(self.hyper_w1(states))

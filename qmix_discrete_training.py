@@ -41,6 +41,8 @@ class QMIX():
         self.target_update = target_update
         self.hidden_dim = hidden_dim
         self.rnn_dim = rnn_dim
+        self.gamma = gamma
+        self.eps = eps
 
         # Torch
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,13 +84,40 @@ class QMIX():
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
         
+        # Calculate q-values
         for i in range(self.agent_num):
             hidden_states = self.agent_net[i].init_hidden().expand(self.batch_size, -1)
             q_value, _ = self.agent_net[i](states[:,i,:], prev_actions[:, i, :], hidden_states)
             q_value = q_value.gather(1, actions[:, i, 0].view(-1,1).long())
-            q_values = q_value if i==0 else torch.cat((q_values, q_value), dim=1)
-            
+            q_values = q_value.unsqueeze(1) if i==0 else torch.cat((q_values, q_value.unsqueeze(1)), dim=1)
+              
         q_tot = self.mixing_net(states, q_values)
+        
+        # Calculate target q-values
+        for i in range(self.agent_num):
+            hidden_states = self.agent_target_net[i].init_hidden().expand(self.batch_size, -1)
+            target_q_value, _ = self.agent_target_net[i](states[:,i,:], prev_actions[:, i, :], hidden_states)
+            target_q_value, _ = torch.max(target_q_value, dim=1)
+            target_q_values = target_q_value.unsqueeze(1) if i==0 else torch.cat((target_q_values, target_q_value.unsqueeze(1)), dim=1)
+            
+        target_q_tot = self.mixing_target_net(states, target_q_values)
+        
+        # Calculate 1-step Q-Learning targets
+        targets = rewards + self.gamma * (1 - dones) * target_q_tot
+
+        # Temporal difference error
+        print(target_q_tot.shape, q_tot.shape, targets.shape)
+        td_error = (q_tot - targets.detach())
+        print(td_error, td_error[dones==False])
+        td_error = td_error[dones==False]
+        
+        
+        
+        
+        
+        
+        
+        
 
 if __name__ == "__main__":
     states = torch.FloatTensor([[[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[10, 11, 12], [13, 14, 15], [16, 17, 18]]])
@@ -96,7 +125,7 @@ if __name__ == "__main__":
     actions = torch.FloatTensor([[[0], [1], [2]], [[3], [4], [5]]])
     rewards = torch.FloatTensor([[[0.1], [0.2], [0.3]], [[0.4], [0.5], [0.6]]])
     next_states = torch.FloatTensor([[[11, 12, 13], [14, 15, 16], [17, 18, 19]], [[21, 22, 23], [24, 25, 26], [27, 28, 29]]])
-    dones = torch.FloatTensor([[[False], [False], [False]], [[False], [False], [False]]])
+    dones = torch.FloatTensor([[[False], [False], [True]], [[False], [False], [True]]])
 
     qmix = QMIX(env=5, batch_size=2)
     qmix.training(states, prev_actions, actions, rewards, next_states, dones)
